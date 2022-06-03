@@ -1,5 +1,7 @@
 <?php
 
-class Freemius_InvalidArgumentException extends Freemius_Exception
+namespace Freemius\Exceptions;
+
+class InvalidArgumentException extends Exception
 {
 }

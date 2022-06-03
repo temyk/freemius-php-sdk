@@ -1,6 +1,8 @@
 <?php
 
-class Freemius_OAuthException extends Freemius_Exception
+namespace Freemius\Exceptions;
+
+class OAuthException extends Exception
 {
     public function __construct($pResult)
     {

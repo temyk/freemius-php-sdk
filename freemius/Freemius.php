@@ -1,4 +1,9 @@
 <?php
+
+namespace Freemius;
+
+use Freemius\Exceptions\Exception;
+
 /**
  * Copyright 2014 Freemius, Inc.
  *
@@ -15,13 +20,7 @@
  * under the License.
  */
 
-if ( ! function_exists('curl_init')) {
-    throw new Exception('Freemius needs the CURL PHP extension.');
-}
-
-require_once(dirname(__FILE__) . '/FreemiusBase.php');
-
-define('FS_SDK__USER_AGENT', 'fs-php-' . Freemius_Api_Base::VERSION);
+define('FS_SDK__USER_AGENT', 'fs-php-' . FreemiusBase::VERSION);
 
 $curl_version = curl_version();
 
@@ -34,11 +33,7 @@ if ( ! defined('FS_API__SANDBOX_ADDRESS')) {
     define('FS_API__SANDBOX_ADDRESS', FS_API__PROTOCOL . '://sandbox-api.freemius.com');
 }
 
-if (class_exists('Freemius_Api')) {
-    return;
-}
-
-class Freemius_Api extends Freemius_Api_Base
+class Freemius extends FreemiusBase
 {
     /**
      * Default options for curl.
@@ -52,13 +47,18 @@ class Freemius_Api extends Freemius_Api_Base
     );
 
     /**
+     * @var int Clock diff in seconds between current server to API server.
+     */
+    private static $_clock_diff = 0;
+
+    /**
      * @param  string  $pScope  'app', 'developer', 'user' or 'install'.
-     * @param  number  $pID  Element's id.
+     * @param  int  $pID  Element's id.
      * @param  string  $pPublic  Public key.
      * @param  string|bool  $pSecret  Element's secret key.
-     * @param  bool  $pSandbox  Whether or not to run API in sandbox mode.
+     * @param  bool  $pSandbox  Whether to run API in sandbox mode.
      */
-    public function __construct($pScope, $pID, $pPublic, $pSecret = false, $pSandbox = false)
+    public function __construct(string $pScope, int $pID, string $pPublic, $pSecret = false, bool $pSandbox = false)
     {
         // If secret key not provided, user public key encryption.
         if (is_bool($pSecret)) {
@@ -68,15 +68,10 @@ class Freemius_Api extends Freemius_Api_Base
         parent::Init($pScope, $pID, $pPublic, $pSecret, $pSandbox);
     }
 
-    public function GetUrl($pCanonizedPath = '')
+    public function GetUrl($pCanonizedPath = ''): string
     {
         return ($this->_sandbox ? FS_API__SANDBOX_ADDRESS : FS_API__ADDRESS) . $pCanonizedPath;
     }
-
-    /**
-     * @var int Clock diff in seconds between current server to API server.
-     */
-    private static $_clock_diff = 0;
 
     /**
      * Set clock diff for all API calls.
@@ -102,7 +97,7 @@ class Freemius_Api extends Freemius_Api_Base
      * @param  string  $pJsonEncodedParams
      * @param  string  $pContentType
      */
-    protected function SignRequest($pResourceUrl, $pMethod, &$opts, $pJsonEncodedParams, $pContentType)
+    protected function SignRequest(string $pResourceUrl, string $pMethod, array &$opts, string $pJsonEncodedParams, string $pContentType)
     {
         $auth = $this->GenerateAuthorizationParams(
             $pResourceUrl,
@@ -130,11 +125,11 @@ class Freemius_Api extends Freemius_Api_Base
      * @return array
      */
     private function GenerateAuthorizationParams(
-        $pResourceUrl,
-        $pMethod = 'GET',
-        $pJsonEncodedParams = '',
-        $pContentType = ''
-    ) {
+        string $pResourceUrl,
+        string $pMethod = 'GET',
+        string $pJsonEncodedParams = '',
+        string $pContentType = ''
+    ): array {
         $pMethod = strtoupper($pMethod);
 
         $eol         = "\n";
@@ -179,7 +174,7 @@ class Freemius_Api extends Freemius_Api_Base
      *
      * @return string
      */
-    function GetSignedUrl($pPath)
+    function GetSignedUrl($pPath): string
     {
         $resource     = explode('?', $this->CanonizePath($pPath));
         $pResourceUrl = $resource[0];
@@ -200,14 +195,14 @@ class Freemius_Api extends Freemius_Api_Base
      * developers want to do fancier things or use something other than curl to
      * make the request.
      *
-     * @param $pCanonizedPath The URL to make the request to
-     * @param  string  $pMethod  HTTP method
-     * @param  array  $pParams  The parameters to use for the POST body
-     * @param  array  $pFileParams
-     * @param  null  $ch  Initialized curl handle
+     * @param string $pCanonizedPath The URL to make the request to
+     * @param string  $pMethod  HTTP method
+     * @param array  $pParams  The parameters to use for the POST body
+     * @param array  $pFileParams
+     * @param null  $ch  Initialized curl handle
      *
      * @return mixed
-     * @throws Freemius_Exception
+     * @throws Exception
      */
     public function MakeRequest(
         $pCanonizedPath,
@@ -286,14 +281,6 @@ class Freemius_Api extends Freemius_Api_Base
         curl_setopt_array($ch, $opts);
         $result = curl_exec($ch);
 
-        /*if (curl_errno($ch) == 60) // CURLE_SSL_CACERT
-        {
-            self::errorLog('Invalid or no certificate authority found, using bundled information');
-            curl_setopt($ch, CURLOPT_CAINFO,
-            dirname(__FILE__) . '/fb_ca_chain_bundle.crt');
-            $result = curl_exec($ch);
-        }*/
-
         // With dual stacked DNS responses, it's possible for a server to
         // have IPv6 enabled but not have IPv6 connectivity.  If this is
         // the case, curl will try IPv4 first and if that fails, then it will
@@ -304,7 +291,7 @@ class Freemius_Api extends Freemius_Api_Base
             $regex   = '/Failed to connect to ([^:].*): Network is unreachable/';
             if (preg_match($regex, curl_error($ch), $matches)) {
                 if (strlen(@inet_pton($matches[1])) === 16) {
-                    self::errorLog('Invalid IPv6 configuration on server, Please disable or get native IPv6 on your server.');
+                    //self::errorLog('Invalid IPv6 configuration on server, Please disable or get native IPv6 on your server.');
                     self::$CURL_OPTS[CURLOPT_IPRESOLVE] = CURL_IPRESOLVE_V4;
                     curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
                     $result = curl_exec($ch);
@@ -313,7 +300,7 @@ class Freemius_Api extends Freemius_Api_Base
         }
 
         if ($result === false) {
-            $e = new Freemius_Exception(array(
+            $e = new Exception(array(
                 'error' => array(
                     'code'    => curl_errno($ch),
                     'message' => curl_error($ch),
@@ -337,7 +324,7 @@ class Freemius_Api extends Freemius_Api_Base
      *
      * @return string
      */
-    private function GenerateMultipartBody($pParams, $pFileParams, $pBoundary)
+    private function GenerateMultipartBody(array $pParams, array $pFileParams, string $pBoundary): string
     {
         $body = '';
 
@@ -373,7 +360,7 @@ class Freemius_Api extends Freemius_Api_Base
      *
      * @throws Exception
      */
-    private function GetMimeContentType($pFilename)
+    private function GetMimeContentType($pFilename): string
     {
         if (function_exists('mime_content_type')) {
             return mime_content_type($pFilename);

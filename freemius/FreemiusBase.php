@@ -1,4 +1,10 @@
 <?php
+
+namespace Freemius;
+
+
+use Freemius\Exceptions\Exception;
+
 /**
  * Copyright 2014 Freemius, Inc.
  *
@@ -25,32 +31,9 @@ if ( ! defined('FS_SDK__EXCEPTIONS_PATH')) {
     define('FS_SDK__EXCEPTIONS_PATH', FS_SDK__PATH . '/Exceptions/');
 }
 
-if ( ! function_exists('json_decode')) {
-    throw new Exception('Freemius needs the JSON PHP extension.');
-}
-
-// Include all exception files.
-$exceptions = array(
-    'Exception',
-    'InvalidArgumentException',
-    'ArgumentNotExistException',
-    'EmptyArgumentException',
-    'OAuthException'
-);
-
-if ( ! class_exists('Freemius_Exception')) {
-    foreach ($exceptions as $e) {
-        require FS_SDK__EXCEPTIONS_PATH . $e . '.php';
-    }
-}
-
-if (class_exists('Freemius_Api_Base')) {
-    return;
-}
-
-abstract class Freemius_Api_Base
+abstract class FreemiusBase
 {
-    const VERSION = '1.0.4';
+    const VERSION = '1.1.0';
     const FORMAT = 'json';
 
     protected $_id;
@@ -64,9 +47,9 @@ abstract class Freemius_Api_Base
      * @param  number  $pID  Element's id.
      * @param  string  $pPublic  Public key.
      * @param  string  $pSecret  Element's secret key.
-     * @param  bool  $pSandbox  Whether or not to run API in sandbox mode.
+     * @param  bool  $pSandbox  Whether to run API in sandbox mode.
      */
-    public function Init($pScope, $pID, $pPublic, $pSecret, $pSandbox = false)
+    public function Init(string $pScope, int $pID, string $pPublic, string $pSecret, bool $pSandbox = false)
     {
         $this->_id      = $pID;
         $this->_public  = $pPublic;
@@ -80,7 +63,7 @@ abstract class Freemius_Api_Base
         return $this->_sandbox;
     }
 
-    function CanonizePath($pPath)
+    function CanonizePath($pPath): string
     {
         $pPath     = trim($pPath, '/');
         $query_pos = strpos($pPath, '?');
@@ -118,7 +101,7 @@ abstract class Freemius_Api_Base
                 $base = '/installs/' . $this->_id;
                 break;
             default:
-                throw new Freemius_Exception('Scope not implemented.');
+                throw new Exception('Scope not implemented.');
         }
 
         return '/v' . FS_API__VERSION . $base .
@@ -134,10 +117,10 @@ abstract class Freemius_Api_Base
 
         try {
             $result = $this->MakeRequest($pPath, $pMethod, $pParams, $pFileParams);
-        } catch (Freemius_Exception $e) {
+        } catch (Exception $e) {
             // Map to error object.
             $result = json_encode($e->getResult());
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             // Map to error object.
             $result = json_encode(array(
                 'error' => array(
@@ -157,7 +140,7 @@ abstract class Freemius_Api_Base
     /**
      * @return bool True if successful connectivity to the API endpoint using ping.json endpoint.
      */
-    public function Test()
+    public function Test(): bool
     {
         $pong = $this->_Api('/v' . FS_API__VERSION . '/ping.json');
 
@@ -170,7 +153,7 @@ abstract class Freemius_Api_Base
      * @return int Clock diff in seconds.
      * @since 1.0.2
      */
-    public function FindClockDiff()
+    public function FindClockDiff(): int
     {
         $time = time();
         $pong = $this->_Api('/v' . FS_API__VERSION . '/ping.json');
@@ -178,13 +161,16 @@ abstract class Freemius_Api_Base
         return ($time - strtotime($pong->timestamp));
     }
 
+    /**
+     * @throws Exception
+     */
     public function Api($pPath, $pMethod = 'GET', $pParams = array(), $pFileParams = array())
     {
         return $this->_Api($this->CanonizePath($pPath), $pMethod, $pParams, $pFileParams);
     }
 
     /**
-     * Base64 encoding that does not need to be urlencode()ed.
+     * Base64 encoding that does not need to be urlencoded.
      * Exactly the same as base64_encode except it uses
      *   - instead of +
      *   _ instead of /
@@ -194,13 +180,13 @@ abstract class Freemius_Api_Base
      *
      * @return string
      */
-    protected static function Base64UrlDecode($input)
+    protected static function Base64UrlDecode(string $input): string
     {
         return base64_decode(strtr($input, '-_', '+/'));
     }
 
     /**
-     * Base64 encoding that does not need to be urlencode()ed.
+     * Base64 encoding that does not need to be urlencoded.
      * Exactly the same as base64_encode except it uses
      *   - instead of +
      *   _ instead of /
@@ -209,7 +195,7 @@ abstract class Freemius_Api_Base
      *
      * @return string base64Url encoded string
      */
-    protected static function Base64UrlEncode($input)
+    protected static function Base64UrlEncode(string $input): string
     {
         $str = strtr(base64_encode($input), '+/', '-_');
         $str = str_replace('=', '', $str);

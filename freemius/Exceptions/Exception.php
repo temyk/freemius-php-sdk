@@ -1,10 +1,12 @@
 <?php
 
+namespace Freemius\Exceptions;
+
 /**
  * Thrown when an API call returns an exception.
  *
  */
-class Freemius_Exception extends Exception
+class Exception extends \Exception
 {
     protected $_result;
     protected $_type;
@@ -13,7 +15,7 @@ class Freemius_Exception extends Exception
     /**
      * Make a new API Exception with the given result.
      *
-     * @param  array  $result  The result from the API server.
+     * @param  array|string  $result  The result from the API server.
      */
     public function __construct($result)
     {
@@ -33,6 +35,8 @@ class Freemius_Exception extends Exception
             if (isset($result['error']['type'])) {
                 $type = $result['error']['type'];
             }
+        } elseif (is_string($result)) {
+            $message = $result;
         }
 
         $this->_type = $type;
@@ -46,7 +50,7 @@ class Freemius_Exception extends Exception
      *
      * @return array The result from the API server
      */
-    public function getResult()
+    public function getResult(): array
     {
         return $this->_result;
     }
