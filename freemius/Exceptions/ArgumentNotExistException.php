@@ -1,2 +1,5 @@
 <?php
-    class Freemius_ArgumentNotExistException extends Freemius_InvalidArgumentException { }
+
+class Freemius_ArgumentNotExistException extends Freemius_InvalidArgumentException
+{
+}
