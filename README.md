@@ -6,13 +6,16 @@ If you only need to access one product, we recommend using the `plugin` scope. Y
 If you need to access multiple products, use the `developer` scope. To get your credentials, click on *My Profile* at the top right menu and you'll find it in the *Keys* section.
 
 ```php
+  use Freemius\FreemiusBase;
+  use Freemius\Freemius;
+
   define( 'FS__API_SCOPE', 'developer' );
   define( 'FS__API_DEV_ID', 1234 );
   define( 'FS__API_PUBLIC_KEY', 'pk_YOUR_PUBLIC_KEY' );
   define( 'FS__API_SECRET_KEY', 'sk_YOUR_SECRET_KEY' );
   
   // Init SDK.
-  $api = new Freemius_Api(FS__API_SCOPE, FS__API_DEV_ID, FS__API_PUBLIC_KEY, FS__API_SECRET_KEY);
+  $api = new Freemius(FS__API_SCOPE, FS__API_DEV_ID, FS__API_PUBLIC_KEY, FS__API_SECRET_KEY);
   
   // Get all products.
   $result = $api->Api('/plugins.json');
